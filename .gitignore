@@ -1,0 +1,23 @@
+# --- Datasets ---
+datasets/*
+!datasets/.gitkeep
+
+# --- Python cache ---
+__pycache__/
+*.py[cod]
+
+# --- Virtual environments ---
+.venv/
+venv/
+env/
+
+# --- IDE / editors ---
+.vscode/
+.idea/
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- OS files ---
+.DS_Store
+Thumbs.db
