@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def evaluate_tracker_performance(estimated_states: np.ndarray, truth_states: np.ndarray):
+def evaluate_tracker_performance(all_estimated_states: list, all_truth_states: list):
     """
     Evaluates and displays the performance of the Kalman Filter on the entire dataset.
     This function takes into account partial state filter output : position and velocity.
@@ -10,22 +10,34 @@ def evaluate_tracker_performance(estimated_states: np.ndarray, truth_states: np.
         estimated_states: Resulting states 3D array (scenarios, time_steps, 6 state variables).
         truth_states: Ground truth 3D array (scenarios, time_steps, 6 state variables).
     """
+
+    total_num_scenarios = len(all_truth_states)
+    total_num_states = 0
+    all_err_pos = []
+    all_err_vel = []
     
     # 1. Calculation of Euclidean errors (ignoring NaNs for the calculations)
-    err_pos = np.sqrt(np.sum((estimated_states[:, :, 0:3] - truth_states[:, :, 0:3])**2, axis=2))
-    err_vel = np.sqrt(np.sum((estimated_states[:, :, 3:6] - truth_states[:, :, 3:6])**2, axis=2))
+    for i in range(total_num_scenarios):
+
+        err_pos = np.sqrt(np.sum((all_estimated_states[i][:, 0:3] - all_truth_states[i][:, 0:3])**2, axis=1))
+        err_vel = np.sqrt(np.sum((all_estimated_states[i][:, 3:6] - all_truth_states[i][:, 3:6])**2, axis=1))
+        all_err_pos.append(err_pos)
+        all_err_vel.append(err_vel)
+        total_num_states += all_truth_states[i].shape[0]
     
     # 2. Global Statistics  
-    mean_pos_err = np.nanmean(err_pos)
-    p95_pos_err  = np.nanpercentile(err_pos, 95)
-    
-    mean_vel_err = np.nanmean(err_vel)
-    p95_vel_err  = np.nanpercentile(err_vel, 95)
+    array_err_pos = np.concatenate(all_err_pos)
+    mean_pos_err  = np.nanmean(array_err_pos)
+    p95_pos_err   = np.nanpercentile(array_err_pos, 95)
+
+    array_err_vel = np.concatenate(all_err_vel)
+    mean_vel_err  = np.nanmean(array_err_vel)
+    p95_vel_err   = np.nanpercentile(array_err_vel, 95)
     
     # Availability Ratio
-    total_expected = truth_states.shape[0] * truth_states.shape[1] * 2
-    total_valid_err_pos = np.sum(~np.isnan(err_pos))
-    total_valid_err_vel = np.sum(~np.isnan(err_vel))
+    total_expected = total_num_states * 2
+    total_valid_err_pos = np.sum(~np.isnan(array_err_pos))
+    total_valid_err_vel = np.sum(~np.isnan(array_err_vel))
     total_valid = total_valid_err_pos + total_valid_err_vel
     availability = (total_valid / total_expected) * 100
     

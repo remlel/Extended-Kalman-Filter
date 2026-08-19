@@ -44,7 +44,7 @@ $$ P_{k|k} = (I - K_k H_k) P_{k|k-1} $$
 
 # Mahalanobis Distance
 
-## Formula
+## 1. Formula
 
 The Mahalanobis distance is defined as
 
@@ -62,7 +62,7 @@ The innovation is
 
 ---
 
-## Intuition
+## 2. Intuition
 
 Unlike the Euclidean distance, the Mahalanobis distance evaluates the **consistency** of the innovation with respect to its expected uncertainty.
 
@@ -74,7 +74,7 @@ Therefore, the Mahalanobis distance is a **relative** distance, whereas the Eucl
 
 ---
 
-## Role of the Innovation Covariance
+## 3. Role of the Innovation Covariance
 
 The innovation covariance matrix
 
@@ -91,7 +91,7 @@ If `S = I`, the Mahalanobis distance reduces to the standard Euclidean distance.
 
 ---
 
-## Geometric Interpretation
+## 4. Geometric Interpretation
 
 The expression
 
@@ -109,7 +109,7 @@ Instead of measuring distances with circles (Euclidean geometry), the Mahalanobi
 
 ---
 
-## Gating
+## 5. Gating
 
 The squared Mahalanobis distance `D²` is compared with a threshold `γ`.
 

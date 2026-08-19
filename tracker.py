@@ -8,14 +8,15 @@ class RadarTracker:
     outlier rejection (Gating), and orchestrating the EKF mathematical engine.
     """
 
-    def __init__(self, initial_state: np.ndarray, initial_covariance: np.ndarray, 
-                 dt: float, radar_pos: np.ndarray = np.array([0.0, 0.0, 0.0]), chi2_thresholds: float = 9.49):
+    def __init__(self, initial_state: np.ndarray, initial_covariance: np.ndarray, max_missed_detect: float, dt: float, 
+                 radar_pos: np.ndarray = np.array([0.0, 0.0, 0.0]), chi2_thresholds: dict = {1: 3.84, 2: 5.99, 3: 7.81, 4: 9.49}):
         
         # Mathematical engine
         self.ekf = ExtendedKalmanFilter(initial_state, initial_covariance)
         
-        # Physical parameters
+        # Parameters
         self.dt = dt
+        self.max_missed_detect = max_missed_detect
         self.radar_pos = radar_pos
         self.chi2_thresholds = chi2_thresholds    
         
@@ -58,10 +59,10 @@ class RadarTracker:
         # 6. Case where there is at least one measurement    
         else:
             # Dynamic truncation
-            z_meas_part = z_meas[mask]              # Only keeping valid measures
-            z_pred_part = z_pred_full[mask]         # Only keeping the associated predicted measures
-            H_part = H_full[mask, :]                # Only keeping the lines associated to the valid measures
-            R_part = R[np.ix_(mask, mask)]          # Only keeping the lines and columns associated to the valid measures
+            z_meas_part = z_meas[mask]           # Only keeping valid measures
+            z_pred_part = z_pred_full[mask]      # Only keeping the associated predicted measures
+            H_part = H_full[mask, :]             # Only keeping the lines associated to the valid measures
+            R_part = R[np.ix_(mask, mask)]       # Only keeping the lines and columns associated to the valid measures
             
             # 6.1. Calculating covariance innovation and Mahalanobis' distance
             S_part = self.ekf.covariance_innovation_S(H_part, R_part)
@@ -81,7 +82,7 @@ class RadarTracker:
                 self.missed_detections += 1
 
         # 7. Handling track's death if to many missed detections
-        if self.missed_detections == 10:
+        if self.missed_detections == self.max_missed_detect:
             return False
         else:
             return True
@@ -100,6 +101,7 @@ class RadarTracker:
             D2 (float) : Mahalanobis distance
         """
 
-        D2 = (z_meas - z_pred).T @ np.linalg.inv(S) @ (z_meas - z_pred)
+        innovation = z_meas - z_pred
+        D2 = innovation.T @ np.linalg.solve(S, innovation)      # Same as : inov.T x inv(S) x inov
 
         return D2.item()

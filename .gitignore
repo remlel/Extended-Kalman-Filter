@@ -1,6 +1,6 @@
 # --- Datasets ---
-datasets/*
-!datasets/.gitkeep
+Dataset/*
+!Dataset/.gitkeep
 
 # --- Python cache ---
 __pycache__/

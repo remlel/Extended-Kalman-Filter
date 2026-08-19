@@ -29,10 +29,10 @@ class ExtendedKalmanFilter:
             Q (np.ndarray): Covariance matrix of process noise.
             
         """
-
+        
         # Prediction of the next state
         self.x = F @ self.x
-
+        
         # Prediction of the next covariance matrix
         self.p = F @ self.p @ F.T + Q
         
@@ -51,10 +51,10 @@ class ExtendedKalmanFilter:
         """
 
         # Measurement Innovation 
-        y = z - h_x  
+        y = z - h_x
 
         # Kalman Gain
-        K = self.p @ H.T @ np.linalg.inv(S)
+        K = self.p @ H.T @ np.linalg.solve(S, np.eye(S.shape[0]))
 
         # State Update
         self.x = self.x + K @ y
@@ -62,6 +62,7 @@ class ExtendedKalmanFilter:
         # Covariance Update
         I = np.eye(self.p.shape[0])
         self.p = (I - K @ H) @ self.p
+
 
 
     def covariance_innovation_S(self, H: np.ndarray, R: np.ndarray):
