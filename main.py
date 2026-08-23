@@ -1,30 +1,27 @@
 import numpy as np
 import scipy.io as sio
-from display_perf import evaluate_tracker_performance, plot_single_scenario
+from display_perf import evaluate_tracker_performance, plot_single_scenario, evaluate_benchmark
 from config import TrackerConfig
 from pipeline import run_single_scenario
 
 
 
-# ====| 1. Data |==== #
+def run_full_estimation(dataset_files: list, config: TrackerConfig):
+    """
+    Uses all datasets files to evaluate the Kalman Filter at a global scale.
+    The datasets can have different time steps and/or number of measurements (2nd dimension).
+    Args:
+        dataset_files (list): Contains .mat datatset files
+        config (TrackerConfig): The user config of the scenario.
+    Returns:
+        all_estimated_states (list[np.ndarray]): Contains all the arrays of estimated states for each scenario. 
+        all_covariance_matrices (list[np.ndarray]): Contains all the estimated covariance matrices for each scenario.
+        all_ground_truth (list[np.ndarray]): Contains all the arrays of truth states for each scenario. 
+    """
 
-dataset_files = [
-    'Dataset/Radar_Dataset_dt_0.1_1.mat',
-    'Dataset/Radar_Dataset_dt_0.1_3.mat'
-]
-
-
-# ====| 2. User Parameters |==== #
-
-config = TrackerConfig()
-
-
-# ====| 3.1 Iterating on Datasets |==== #
-
-if 0:
-
-    all_estimated_states = []
-    all_ground_truth = []
+    all_estimated_states    = []
+    all_covariance_matrices = []
+    all_ground_truth        = []
 
     for file in dataset_files:
 
@@ -43,21 +40,24 @@ if 0:
         for i in range(num_scenarios):
 
             estimated_states_array = np.full((num_measures, 6), np.nan)
-            estimated_states_array = run_single_scenario(dataset[i, :, 0:4], estimated_states_array, config)
+            covariance_matrices_array = np.full((num_measures, 6, 6), np.nan)
+            estimated_states_array, covariance_matrices_array = run_single_scenario(dataset[i, :, 0:4],
+                estimated_states_array, covariance_matrices_array, config)
 
-            # 4. Adding new filled estimated states array & associated ground truth
+            # 4. Adding new filled estimated states array & associated covariance matrices & associated ground truth
             all_estimated_states.append(estimated_states_array)
+            all_covariance_matrices.append(covariance_matrices_array)
             all_ground_truth.append(dataset[i, :, 4:10])
 
-
-    # ====| 4.1 Displaying results |==== #
-
-    evaluate_tracker_performance(all_estimated_states, all_ground_truth)
+    return all_estimated_states, all_covariance_matrices, all_ground_truth
 
 
-# ====| 3.2 Filtering Specific Scenarios |==== #
 
-if 1:
+def run_random_visualization(dataset_files: list, config: TrackerConfig):
+    """
+        Randomly picks a scenario among all datasets files and displays a plot of the target trajectory and estimated positions.
+        The datasets can have different time steps and/or number of measurements (2nd dimension).
+        """
 
     # 1. Fetching global dataset
     all_data = []
@@ -83,6 +83,57 @@ if 1:
 
     # 4. Running & Plotting
     estimated_states_array = np.full((num_measures, 6), np.nan)
-    estimated_states = run_single_scenario(scenario[:, 0:4], estimated_states_array, config)
+    covariance_matrices_array = np.full((num_measures, 6, 6), np.nan)
+    estimated_states, covariance_matrices = run_single_scenario(scenario[:, 0:4], estimated_states_array, covariance_matrices_array, config)
 
     plot_single_scenario(estimated_states, scenario[:, 4:10], config.dt, config.radar_pos)
+
+
+
+# ====| Main Execution |==== #
+
+if __name__ == "__main__":
+    
+    # ---| 1. "Switches" |--- #
+    
+    DO_EVALUATION = True
+    DO_VISUALIZATION = False
+    DO_BENCHMARK = False
+
+
+    # ---| 2. Setup |--- #
+
+    dataset_files = [
+        'Dataset/Radar_Dataset_dt_0.1_1.mat',
+        'Dataset/Radar_Dataset_dt_0.1_2.mat'
+    ]
+    my_config = TrackerConfig()
+
+
+    # ---| 3. Execution |--- #
+
+    if DO_EVALUATION:
+        print("\n--- Running Global Evaluation ---")
+        all_estimated_states, all_covariance_matrices, all_ground_truth = run_full_estimation(dataset_files, my_config)
+        evaluate_tracker_performance(all_estimated_states, all_covariance_matrices, all_ground_truth)
+        
+    if DO_VISUALIZATION:
+        print("\n--- Running Random Scenario Visualization ---")
+        run_random_visualization(dataset_files, my_config)
+
+    if DO_BENCHMARK:
+        print("\n--- Running Benchmark ---")
+
+        my_config.force_degraded_init = True
+
+        # Run 1 : Partial 
+        my_config.allow_partial_init = True
+        states_partial, truth = run_full_estimation(dataset_files, my_config)
+        array_err_pos_part, array_err_vel_part = evaluate_tracker_performance(states_partial, truth, benchmark=True)
+        
+        # Run 2 : Full
+        my_config.allow_partial_init = False
+        states_full, _ = run_full_estimation(dataset_files, my_config)
+        array_err_pos_full, array_err_vel_full = evaluate_tracker_performance(states_full, truth, benchmark=True)
+        
+        evaluate_benchmark(array_err_pos_full, array_err_vel_full, array_err_pos_part, array_err_vel_part)

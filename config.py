@@ -10,10 +10,14 @@ class TrackerConfig:
 
     # ---| Tracking Parameters |--- #
 
+    # Partial or Full measurements initialization
+    allow_partial_init : bool = False
+    # Forcing a degraded initialization (evaluate partial initialization performance)
+    force_degraded_init: bool = False
     # Dynamic Gating Threshold (Chi-2 law at 95%)
-    chi2_thresholds  : dict = field(default_factory=lambda: {1: 3.84, 2: 5.99, 3: 7.81, 4: 9.49})
+    chi2_thresholds    : dict = field(default_factory=lambda: {1: 3.84, 2: 5.99, 3: 7.81, 4: 9.49})
     # Number of generated points for Monte Carlo simulation
-    N                : int  = 1000
+    N : int  = 1000
     # Maximal number of missed detections before killing track
     max_missed_detect: int  = 10
 
