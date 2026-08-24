@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.io as sio
-from display_perf import evaluate_tracker_performance, plot_single_scenario, evaluate_benchmark
+from display_perf import *
 from config import TrackerConfig
 from pipeline import run_single_scenario
 
@@ -87,6 +87,7 @@ def run_random_visualization(dataset_files: list, config: TrackerConfig):
     estimated_states, covariance_matrices = run_single_scenario(scenario[:, 0:4], estimated_states_array, covariance_matrices_array, config)
 
     plot_single_scenario(estimated_states, scenario[:, 4:10], config.dt, config.radar_pos)
+    ellipsoids_plot_single_scenario(estimated_states, covariance_matrices, scenario[:, 4:10], config.radar_pos)
 
 
 
@@ -96,9 +97,9 @@ if __name__ == "__main__":
     
     # ---| 1. "Switches" |--- #
     
-    DO_EVALUATION = True
+    DO_EVALUATION = False
     DO_VISUALIZATION = False
-    DO_BENCHMARK = False
+    DO_BENCHMARK = True
 
 
     # ---| 2. Setup |--- #
@@ -126,14 +127,30 @@ if __name__ == "__main__":
 
         my_config.force_degraded_init = True
 
-        # Run 1 : Partial 
-        my_config.allow_partial_init = True
-        states_partial, truth = run_full_estimation(dataset_files, my_config)
-        array_err_pos_part, array_err_vel_part = evaluate_tracker_performance(states_partial, truth, benchmark=True)
-        
-        # Run 2 : Full
+        # ---| Run 1 : Partial (Init or/and Update) |--- #
+
+        # ======> Chose desired config <====== #
         my_config.allow_partial_init = False
-        states_full, _ = run_full_estimation(dataset_files, my_config)
-        array_err_pos_full, array_err_vel_full = evaluate_tracker_performance(states_full, truth, benchmark=True)
+        my_config.allow_partial_update = True
+        #======================================#
+
+        benchmark_title_partial = get_benchmark_title(my_config, "PARTIAL")
+        states_partial, cov_matrices_partial, truth = run_full_estimation(dataset_files, my_config)
+        array_err_pos_part, array_err_vel_part, array_D2_part, array_NLL_part = evaluate_tracker_performance(states_partial, cov_matrices_partial, truth, benchmark=True)
         
-        evaluate_benchmark(array_err_pos_full, array_err_vel_full, array_err_pos_part, array_err_vel_part)
+        # ---| Run 2 : Full (Init or/and Update) |--- #
+
+        # ======> Chose desired config <====== #
+        my_config.allow_partial_init = False
+        my_config.allow_partial_update = False
+        #======================================#
+
+        benchmark_title_full = get_benchmark_title(my_config, "FULL")
+        states_full, cov_matrices_full, _ = run_full_estimation(dataset_files, my_config)
+        array_err_pos_full, array_err_vel_full, array_D2_full, array_NLL_full = evaluate_tracker_performance(states_full, cov_matrices_full, truth, benchmark=True)
+
+        # ---| Final Fair Intersection Comparaison |--- #
+
+        benchmark_title = benchmark_title_partial + " VS " + benchmark_title_full
+        evaluate_benchmark(array_err_pos_full, array_err_vel_full, array_D2_full, array_NLL_full,
+                            array_err_pos_part, array_err_vel_part, array_D2_part, array_NLL_part, benchmark_title)

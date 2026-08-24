@@ -52,9 +52,9 @@ def run_single_scenario(scenario_data: np.ndarray, estimated_states: np.ndarray,
         # Fetching initial measurement    
         Z_init = scenario_data[k]
     
-        X_init, P_init = get_initial_state(Z_init, config.sigma_array, config.sigma_vel, config.antenna_array, config.N, config.radar_pos)
+        X_init, P_init = get_initial_state(Z_init, config)
         
-        tracker = RadarTracker(X_init, P_init, config.max_missed_detect, config.dt, config.radar_pos, config.chi2_thresholds)
+        tracker = RadarTracker(X_init, P_init, config)
         estimated_states[k, :] = tracker.ekf.x.flatten()
         covariance_matrices[k, :, :] = tracker.ekf.p
         k += 1  # Moving to next measurement

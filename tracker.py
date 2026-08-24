@@ -1,6 +1,9 @@
 import numpy as np
 from ekf import ExtendedKalmanFilter
 from models import get_F_CV, get_Q_CV, h_nonlinear, compute_jacobian
+from config import TrackerConfig
+
+
 
 class RadarTracker:
     """
@@ -8,17 +11,17 @@ class RadarTracker:
     outlier rejection (Gating), and orchestrating the EKF mathematical engine.
     """
 
-    def __init__(self, initial_state: np.ndarray, initial_covariance: np.ndarray, max_missed_detect: float, dt: float, 
-                 radar_pos: np.ndarray = np.array([0.0, 0.0, 0.0]), chi2_thresholds: dict = {1: 3.84, 2: 5.99, 3: 7.81, 4: 9.49}):
+    def __init__(self, initial_state: np.ndarray, initial_covariance: np.ndarray, config: TrackerConfig):
         
         # Mathematical engine
         self.ekf = ExtendedKalmanFilter(initial_state, initial_covariance)
         
         # Parameters
-        self.dt = dt
-        self.max_missed_detect = max_missed_detect
-        self.radar_pos = radar_pos
-        self.chi2_thresholds = chi2_thresholds    
+        self.dt = config.dt
+        self.max_missed_detect = config.max_missed_detect
+        self.radar_pos = config.radar_pos
+        self.chi2_thresholds = config.chi2_thresholds  
+        self.allow_partial_update = config.allow_partial_update  
         
         # Track lifecycle logic
         self.missed_detections = 0
@@ -48,12 +51,10 @@ class RadarTracker:
 
         # 3. Creation of a Boolean mask (True -> measure, False -> NaN)
         mask = ~np.isnan(z_meas).flatten()
-        
-        # 4. Degrees of freedom (number of valid measurements)
-        dof = np.sum(mask)
 
-        # 5. Case where no measurement at all
-        if dof == 0:
+        # 4. Evaluating detection accordingly to the config (allow_partial_update)
+        is_missing = not np.any(mask) if self.allow_partial_update else not np.all(mask)
+        if is_missing:
             self.missed_detections += 1
 
         # 6. Case where there is at least one measurement    
@@ -69,6 +70,7 @@ class RadarTracker:
             D2 = self._calculate_mahalanobis(z_meas_part, z_pred_part, S_part)
             
             # 6.2. Fetching the gating threshold associated with the degree of freedom
+            dof = np.sum(mask)
             gating_threshold = self.chi2_thresholds[dof]
             
             

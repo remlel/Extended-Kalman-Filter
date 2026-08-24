@@ -1,5 +1,8 @@
 import numpy as np
 import math
+from config import TrackerConfig
+
+
 
 def get_F_CV(dt: float) -> np.ndarray:
     """
@@ -128,8 +131,7 @@ def compute_jacobian(func, state: np.ndarray, *args) -> np.ndarray:
 
 
 
-def get_initial_state(Z_init: np.ndarray, sigma_array: np.ndarray, sigma_vel: float,
-                       antenna_array: np.ndarray, N: int, radar_pos: np.ndarray = np.array([0.0, 0.0, 0.0])):
+def get_initial_state(Z_init: np.ndarray, config: TrackerConfig):
     """
     Calculates an initial state vector and initial covariance matrix. 
     This function handles various cases, regarding the number of measurements in the measurement vector.
@@ -147,8 +149,11 @@ def get_initial_state(Z_init: np.ndarray, sigma_array: np.ndarray, sigma_vel: fl
     """
 
     r, v_rad, az, el = Z_init
-    sigma_r, sigma_v_rad, sigma_az, sigma_el = sigma_array
-    az_max, az_min, el_max, el_min, Rmax = antenna_array
+    sigma_r, sigma_v_rad, sigma_az, sigma_el = config.sigma_array
+    az_max, az_min, el_max, el_min, Rmax = config.antenna_array
+    sigma_vel = config.sigma_vel
+    N = config.N
+    radar_pos = config.radar_pos
 
 
     # --- Local coordonate system --- #
