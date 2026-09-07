@@ -2,6 +2,7 @@ import numpy as np
 from ekf import ExtendedKalmanFilter
 from models import get_F_CV, get_Q_CV, h_nonlinear, compute_jacobian
 from config import TrackerConfig
+from update_strategies import *
 
 
 
@@ -22,10 +23,18 @@ class RadarTracker:
         self.radar_pos = config.radar_pos
         self.chi2_thresholds = config.chi2_thresholds  
         self.allow_partial_update = config.allow_partial_update  
+        self.config = config
         
         # Track lifecycle logic
         self.missed_detections = 0
-        self.is_alive = True
+        if self.config.update_strategy.lower() == "standard":
+            self.updater = StandardUpdate()
+        elif self.config.update_strategy.lower() == "heuristic_reset":
+            self.updater = HeuristicResetUpdate()
+        elif self.config.update_strategy.lower() == "hybrid_heuristic_reset":
+            self.updater = HybridResetUpdate()
+        else:
+            raise ValueError(f"Unknown Strategy: {self.config.update_strategy}")
 
 
     def process_measurement(self, z_meas: np.ndarray, R: np.ndarray, process_noise_var: float) -> None:
@@ -76,7 +85,7 @@ class RadarTracker:
             
             if D2 <= gating_threshold:
                 # 6.3. Updating
-                self.ekf.update(z_meas_part, z_pred_part, H_part, S_part)
+                self.updater.apply(self, z_meas, mask, z_meas_part, z_pred_part, H_part, S_part, self.config)
                 self.missed_detections = 0
           
             else:

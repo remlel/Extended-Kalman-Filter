@@ -130,8 +130,9 @@ if __name__ == "__main__":
         # ---| Run 1 : Partial (Init or/and Update) |--- #
 
         # ======> Chose desired config <====== #
-        my_config.allow_partial_init = False
+        my_config.allow_partial_init = True
         my_config.allow_partial_update = True
+        my_config.update_strategy = "heuristic_reset"
         #======================================#
 
         benchmark_title_partial = get_benchmark_title(my_config, "PARTIAL")
@@ -142,7 +143,8 @@ if __name__ == "__main__":
 
         # ======> Chose desired config <====== #
         my_config.allow_partial_init = False
-        my_config.allow_partial_update = False
+        my_config.allow_partial_update = True
+        my_config.update_strategy = "standard"
         #======================================#
 
         benchmark_title_full = get_benchmark_title(my_config, "FULL")

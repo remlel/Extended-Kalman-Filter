@@ -148,7 +148,7 @@ def get_initial_state(Z_init: np.ndarray, config: TrackerConfig):
         P_init (np.ndarray) : initial covariance matrix.
     """
 
-    r, v_rad, az, el = Z_init
+    r, v_rad, az, el = Z_init.flatten()
     sigma_r, sigma_v_rad, sigma_az, sigma_el = config.sigma_array
     az_max, az_min, el_max, el_min, Rmax = config.antenna_array
     sigma_vel = config.sigma_vel

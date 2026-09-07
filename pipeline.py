@@ -50,7 +50,7 @@ def run_single_scenario(scenario_data: np.ndarray, estimated_states: np.ndarray,
             break  
 
         # Fetching initial measurement    
-        Z_init = scenario_data[k]
+        Z_init = scenario_data[k].reshape(-1, 1)
     
         X_init, P_init = get_initial_state(Z_init, config)
         

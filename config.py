@@ -15,7 +15,11 @@ class TrackerConfig:
     # Partial or Full measurements update
     allow_partial_update : bool = True
     # Forcing a degraded initialization (evaluate partial initialization performance)
-    force_degraded_init: bool = False
+    force_degraded_init: bool = True
+    # Startegy for updates : "standard" / "heuristic_reset" / "hybrid_heuristic_reset"
+    update_strategy: str = "heuristic_reset"
+    # Restart threshold for "heuristic_reset" and "hybrid_heuristic_reset"
+    reset_threshold = 1.2
     # Dynamic Gating Threshold (Chi-2 law at 95%)
     chi2_thresholds    : dict = field(default_factory=lambda: {1: 3.84, 2: 5.99, 3: 7.81, 4: 9.49})
     # Number of generated points for Monte Carlo simulation
