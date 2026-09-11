@@ -6,13 +6,13 @@ from models import get_initial_state, conv_Sphe2Cart, h_nonlinear, compute_jacob
 
 class UpdateStrategy(ABC):
     @abstractmethod
-    def apply(self, tracker, z_meas, mask, z_meas_part, z_pred_part, H_part, S_part, config):
+    def apply(self, tracker, z_meas, mask, z_meas_part, z_pred_part, H_part, S_part, R_part, config):
         pass
 
 class StandardUpdate(UpdateStrategy):
     """Using the traditional update mechanism of the standard EKF."""
 
-    def apply(self, tracker, z_meas, mask, z_meas_part, z_pred_part, H_part, S_part, config):
+    def apply(self, tracker, z_meas, mask, z_meas_part, z_pred_part, H_part, S_part, R_part, config):
 
         tracker.ekf.update(z_meas_part, z_pred_part, H_part, S_part)
 
@@ -20,7 +20,7 @@ class HeuristicResetUpdate(UpdateStrategy):
     """Restarts the track (stops using the information inertia of the system) if the comparison 
     of the predicted and initialisation covariance matrices crosses a threshold."""
 
-    def apply(self, tracker, z_meas, mask, z_meas_part, z_pred_part, H_part, S_part, config):
+    def apply(self, tracker, z_meas, mask, z_meas_part, z_pred_part, H_part, S_part, R_part, config):
 
         # Checking measurement is complete
         if np.all(mask):
@@ -50,7 +50,7 @@ class HybridResetUpdate(UpdateStrategy):
     """Partially restarts the track (stops using the position information inertia of the system) if the comparison of the predicted and 
     initialisation position covariance matrices crosses a threshold. The update method keeps the velocity information inertia of the system."""
 
-    def apply(self, tracker, z_meas, mask, z_meas_part, z_pred_part, H_part, S_part, config):
+    def apply(self, tracker, z_meas, mask, z_meas_part, z_pred_part, H_part, S_part, R_part, config):
 
         # Checking measurement is complete
         if np.all(mask):
@@ -84,7 +84,7 @@ class CMKF(UpdateStrategy):
     """Uses a Centered Measurement Kalman Filter. The discrepency between prediction and measurement is calculated in the cartesian coordonates system.
     This filter induces two (partial) updates: position then velocity."""
 
-    def apply(self, tracker, z_meas, mask, z_meas_part, z_pred_part, H_part, S_part, config):
+    def apply(self, tracker, z_meas, mask, z_meas_part, z_pred_part, H_part, S_part, R_part, config):
 
         # ---| 1. Position Update |--- #
 
@@ -94,6 +94,10 @@ class CMKF(UpdateStrategy):
             H_lin = np.eye(3, 6)                                                                 # Linear matrix only keeping cartesian coordonates of the position
             Y_cart = Z_cart_pos - H_lin @ tracker.ekf.x                                          # Calculating the discrepency between prediction position and measurement position
 
+            R_pol_pos = R_part[np.ix_([0, 2, 3], [0, 2, 3])]
+            z_meas_pos = z_meas[[0, 2, 3]]
+            J_s2c_pos = compute_jacobian(conv_Sphe2Cart, z_meas_pos)
+            R_cart = J_s2c_pos @ R_pol_pos @ J_s2c_pos.T
             S_cart = H_lin @ tracker.ekf.p @ H_lin.T + R_cart
             K_cart = tracker.ekf.p @ H_lin.T @ np.linalg.solve(S_cart, np.eye(S_cart.shape[0]))
 
@@ -109,9 +113,9 @@ class CMKF(UpdateStrategy):
             v_rad_meas = z_meas[1].reshape(1, 1)
             v_rad_pred = z_pred_full_new[1].reshape(1, 1)
             H_v_rad = H_full_new[1, :].reshape(1, 6)
-
+ 
             # Recomputing S for the radial velocity with the NEW covariance matrix
-            R_v_rad = tracker.R[1, 1].reshape(1, 1)
+            R_v_rad = R_part[1, 1].reshape(1, 1)
             S_v_rad = H_v_rad @ tracker.ekf.p @ H_v_rad.T + R_v_rad
         
             # Second Update (Using standard EKF math for the 1D velocity)

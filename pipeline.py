@@ -63,11 +63,8 @@ def run_single_scenario(scenario_data: np.ndarray, estimated_states: np.ndarray,
 
         while k < num_measures:
             z_meas = scenario_data[k].reshape(-1, 1)
-
-            # Determining R according to the measurement
-            R_current = config.R_elementary 
             
-            track_alive = tracker.process_measurement(z_meas, R_current, config.sigma_acc)
+            track_alive = tracker.process_measurement(z_meas)
             estimated_states[k, :] = tracker.ekf.x.flatten()
             covariance_matrices[k, :, :] = tracker.ekf.p
             k += 1

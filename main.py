@@ -114,45 +114,51 @@ if __name__ == "__main__":
     # ---| 3. Execution |--- #
 
     if DO_EVALUATION:
+
         print("\n--- Running Global Evaluation ---")
         all_estimated_states, all_covariance_matrices, all_ground_truth = run_full_estimation(dataset_files, my_config)
         evaluate_tracker_performance(all_estimated_states, all_covariance_matrices, all_ground_truth)
         
     if DO_VISUALIZATION:
+
         print("\n--- Running Random Scenario Visualization ---")
         run_random_visualization(dataset_files, my_config)
 
     if DO_BENCHMARK:
+
         print("\n--- Running Benchmark ---")
 
+        # ---| Common configuration |--- #
         my_config.force_degraded_init = True
 
-        # ---| Run 1 : Partial (Init or/and Update) |--- #
+        # ---| Run 1 |--- #
 
+        # ======> Chose Title <====== #
+        run1_title = "cmkf (~Init_Part & ~Update_Part)"
+        # ======> Chose desired config <====== #
+        my_config.allow_partial_init = True
+        my_config.allow_partial_update = True
+        my_config.update_strategy = "cmkf"
+        #======================================#
+
+        states_run1, cov_matrices_run1, truth = run_full_estimation(dataset_files, my_config)
+        array_err_pos_run1, array_err_vel_run1, array_D2_run1, array_NLL_run1 = evaluate_tracker_performance(states_run1, cov_matrices_run1, truth, benchmark=True)
+        
+        # ---| Run 2 |--- #
+
+        # ======> Chose Title <====== #
+        run2_title = "standard (~Init_Part & ~Update_Part)"
         # ======> Chose desired config <====== #
         my_config.allow_partial_init = True
         my_config.allow_partial_update = True
         my_config.update_strategy = "heuristic_reset"
         #======================================#
 
-        benchmark_title_partial = get_benchmark_title(my_config, "PARTIAL")
-        states_partial, cov_matrices_partial, truth = run_full_estimation(dataset_files, my_config)
-        array_err_pos_part, array_err_vel_part, array_D2_part, array_NLL_part = evaluate_tracker_performance(states_partial, cov_matrices_partial, truth, benchmark=True)
-        
-        # ---| Run 2 : Full (Init or/and Update) |--- #
-
-        # ======> Chose desired config <====== #
-        my_config.allow_partial_init = False
-        my_config.allow_partial_update = True
-        my_config.update_strategy = "standard"
-        #======================================#
-
-        benchmark_title_full = get_benchmark_title(my_config, "FULL")
-        states_full, cov_matrices_full, _ = run_full_estimation(dataset_files, my_config)
-        array_err_pos_full, array_err_vel_full, array_D2_full, array_NLL_full = evaluate_tracker_performance(states_full, cov_matrices_full, truth, benchmark=True)
+        states_run2, cov_matrices_run2, _ = run_full_estimation(dataset_files, my_config)
+        array_err_pos_run2, array_err_vel_run2, array_D2_run2, array_NLL_run2 = evaluate_tracker_performance(states_run2, cov_matrices_run2, truth, benchmark=True)
 
         # ---| Final Fair Intersection Comparaison |--- #
 
-        benchmark_title = benchmark_title_partial + " VS " + benchmark_title_full
-        evaluate_benchmark(array_err_pos_full, array_err_vel_full, array_D2_full, array_NLL_full,
-                            array_err_pos_part, array_err_vel_part, array_D2_part, array_NLL_part, benchmark_title)
+        benchmark_title = "Run 1: " + run1_title + " VS " + "Run 2: " + run2_title
+        evaluate_benchmark(array_err_pos_run2, array_err_vel_run2, array_D2_run2, array_NLL_run2,
+                            array_err_pos_run1, array_err_vel_run1, array_D2_run1, array_NLL_run1, benchmark_title)

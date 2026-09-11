@@ -33,26 +33,33 @@ class RadarTracker:
             self.updater = HeuristicResetUpdate()
         elif self.config.update_strategy.lower() == "hybrid_heuristic_reset":
             self.updater = HybridResetUpdate()
+        elif self.config.update_strategy.lower() == "cmkf":
+            self.updater = CMKF()
         else:
             raise ValueError(f"Unknown Strategy: {self.config.update_strategy}")
 
 
-    def process_measurement(self, z_meas: np.ndarray, R: np.ndarray, process_noise_var: float) -> None:
+    def process_measurement(self, z_meas: np.ndarray) -> None:
         """
         Main entry point called by main.py at each time step.
         Executes the logic: Predict -> Gating (Mahalanobis) -> Update (or Coasting).
         
         Args:
             z_meas (np.ndarray): The radar measurement vector (can contain NaNs).
-            R (np.ndarray): Measurement noise covariance matrix.
-            process_noise_var (float): Process noise variance for Q matrix.
         Returns:
             bool : False if track is dead, True otherwise
         """
-        # 1. Prediction (always)
+
+        # ---| 1. Prediction (always) |---#
+
         F = get_F_CV(self.dt)
-        Q = get_Q_CV(self.dt, process_noise_var)
+        Q = get_Q_CV(self.dt, self.config.sigma_acc)
         self.ekf.predict(F, Q)
+
+        # ---| 2. Update (not always) |---#
+
+        # Determining R according to the measurement
+        R_current = self.config.R_elementary    # Currently using the same basic measurement noise matrix
 
         # 2. Converting prediction into a measurement
         z_pred_full = h_nonlinear(self.ekf.x, self.radar_pos)
@@ -72,7 +79,7 @@ class RadarTracker:
             z_meas_part = z_meas[mask]           # Only keeping valid measures
             z_pred_part = z_pred_full[mask]      # Only keeping the associated predicted measures
             H_part = H_full[mask, :]             # Only keeping the lines associated to the valid measures
-            R_part = R[np.ix_(mask, mask)]       # Only keeping the lines and columns associated to the valid measures
+            R_part = R_current[np.ix_(mask, mask)]       # Only keeping the lines and columns associated to the valid measures
             
             # 6.1. Calculating covariance innovation and Mahalanobis' distance
             S_part = self.ekf.covariance_innovation_S(H_part, R_part)
@@ -85,7 +92,7 @@ class RadarTracker:
             
             if D2 <= gating_threshold:
                 # 6.3. Updating
-                self.updater.apply(self, z_meas, mask, z_meas_part, z_pred_part, H_part, S_part, self.config)
+                self.updater.apply(self, z_meas, mask, z_meas_part, z_pred_part, H_part, S_part, R_part, self.config)
                 self.missed_detections = 0
           
             else:

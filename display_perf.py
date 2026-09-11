@@ -123,8 +123,8 @@ def plot_single_scenario(est_state: np.ndarray, true_state: np.ndarray, dt: floa
     
     # --- Plot 2 : Temporal Error --- #
     ax2 = fig.add_subplot(1, 2, 2)
-    ax2.plot(time_axis, err_pos_scenario, color='blue', label='Erreur Position (m)')
-    ax2.axhline(y=np.nanmean(err_pos_scenario), color='orange', linestyle='--', label='Moyenne du scénario')
+    ax2.plot(time_axis, err_pos_scenario, color='blue', label='Position Error (m)')
+    ax2.axhline(y=np.nanmean(err_pos_scenario), color='orange', linestyle='--', label='Mean Error')
     
     ax2.set_xlabel('Time (s)')
     ax2.set_ylabel('Euclidean Error (m)')
@@ -157,8 +157,7 @@ def ellipsoids_plot_single_scenario(est_states: np.ndarray, cov_matrices: np.nda
     # 1. Plot trajectories
     ax.plot(truth_states[:, 0], truth_states[:, 1], truth_states[:, 2], 'g-', linewidth=2, label='Ground Truth')
     
-    valid_mask = ~np.any(np.isnan(est_states[:, :6]), axis=1)
-    ax.plot(est_states[valid_mask, 0], est_states[valid_mask, 1], est_states[valid_mask, 2], 'r--', linewidth=2, label='Kalman (EKF)')
+    ax.plot(est_states[:, 0], est_states[:, 1], est_states[:, 2], 'r--', linewidth=2, label='Kalman (EKF)')
     ax.scatter(*radar_pos, c='k', marker='^', s=150, label='Radar')
 
     # 2. Base unit sphere generation
@@ -208,62 +207,69 @@ def ellipsoids_plot_single_scenario(est_states: np.ndarray, cov_matrices: np.nda
 
 
 
-def get_benchmark_title(config, prefix: str) -> str:
-    """Generates a title for the benchmark."""
-
-    test_mode = []
-    target_state = True if prefix == "PARTIAL" else False
-    
-    if config.allow_partial_init == target_state: 
-        test_mode.append("INIT")
-    if config.allow_partial_update == target_state: 
-        test_mode.append("UPDATE")
-    
-    mode_str = " + ".join(test_mode) if test_mode else "NONE"
-    return f"{prefix} ({mode_str})"
-
-
-
-def evaluate_benchmark(err_pos_full: np.ndarray, err_vel_full: np.ndarray, D2_full: np.ndarray, NLL_full: np.ndarray,
-                        err_pos_part: np.ndarray, err_vel_part: np.ndarray, D2_part: np.ndarray, NLL_part: np.ndarray,
+def evaluate_benchmark(err_pos_run2: np.ndarray, err_vel_run2: np.ndarray, D2_run2: np.ndarray, NLL_run2: np.ndarray,
+                        err_pos_run1: np.ndarray, err_vel_run1: np.ndarray, D2_run1: np.ndarray, NLL_run1: np.ndarray,
                          title: str = "PARTIAL vs FULL"):
-    """
-    """
+    """Allows to compare fairly the performance of two different models. It displays statistics regarding common estimated states
+    and their performance."""
     
     # 1. Shared masks
-    common_mask_pos = ~np.isnan(err_pos_full) & ~np.isnan(err_pos_part)
-    common_mask_vel = ~np.isnan(err_vel_full) & ~np.isnan(err_vel_part)
-    common_mask_D2 = ~np.isnan(D2_full) & ~np.isnan(D2_part)
-    common_mask_NLL = ~np.isnan(NLL_full) & ~np.isnan(NLL_part)
+    mask_run2 = ~np.isnan(err_pos_run2)
+    mask_run1 = ~np.isnan(err_pos_run1)
+
+    common_mask_pos = ~np.isnan(err_pos_run2) & ~np.isnan(err_pos_run1)
+    common_mask_vel = ~np.isnan(err_vel_run2) & ~np.isnan(err_vel_run1)
+    common_mask_D2 = ~np.isnan(D2_run2) & ~np.isnan(D2_run1)
+    common_mask_NLL = ~np.isnan(NLL_run2) & ~np.isnan(NLL_run1)
+
+    # 2. Analysing common estimations
+    total_run2 = np.sum(mask_run2)
+    total_run1 = np.sum(mask_run1)
+    total_common = np.sum(common_mask_pos)
+    
+    only_run2 = np.sum(mask_run2 & ~mask_run1)
+    only_run1 = np.sum(~mask_run2 & mask_run1)
+    
+    pct_run2_shared = (total_common / total_run2 * 100) if total_run2 > 0 else 0
+    pct_run1_shared = (total_common / total_run1 * 100) if total_run1 > 0 else 0
 
     # 2. Applying masks
-    fair_pos_full = err_pos_full[common_mask_pos]
-    fair_pos_part = err_pos_part[common_mask_pos]
+    fair_pos_run2 = err_pos_run2[common_mask_pos]
+    fair_pos_run1 = err_pos_run1[common_mask_pos]
     
-    fair_vel_full = err_vel_full[common_mask_vel]
-    fair_vel_part = err_vel_part[common_mask_vel]
+    fair_vel_run2 = err_vel_run2[common_mask_vel]
+    fair_vel_run1 = err_vel_run1[common_mask_vel]
 
-    fair_D2_full = D2_full[common_mask_D2]
-    fair_D2_part = D2_part[common_mask_D2]
+    fair_D2_run2 = D2_run2[common_mask_D2]
+    fair_D2_run1 = D2_run1[common_mask_D2]
 
-    fair_NLL_full = NLL_full[common_mask_NLL]
-    fair_NLL_part = NLL_part[common_mask_NLL]
+    fair_NLL_run2 = NLL_run2[common_mask_NLL]
+    fair_NLL_run1 = NLL_run1[common_mask_NLL]
 
     # 3. Display
     print(f"\n=== BENCHMARK: {title} ===")
 
+    print("\n-- Track Survival Intersection --")
+    print(f"Total survived updates Run 1 : {total_run1}")
+    print(f"Total survived updates Run 2 : {total_run2}")
+    print(f"Common survival (Intersection)   : {total_common}")
+    print(f"  -> Run 1 shares {pct_run1_shared:.1f}% of its life with Run 2")
+    print(f"  -> Run 2 shares {pct_run2_shared:.1f}% of its life with Run 1")
+    print(f"Unique to Run 1 : {only_run1} updates")
+    print(f"Unique to Run 2 : {only_run2} updates")
+
     print("\n-- Position Error --")
-    print(f"Full    : {np.mean(fair_pos_full):.2f} m (95% < {np.percentile(fair_pos_full, 95):.2f} m)")
-    print(f"Partial : {np.mean(fair_pos_part):.2f} m (95% < {np.percentile(fair_pos_part, 95):.2f} m)")
+    print(f"Run 1 : {np.mean(fair_pos_run1):.2f} m (95% < {np.percentile(fair_pos_run1, 95):.2f} m)")
+    print(f"Run 2 : {np.mean(fair_pos_run2):.2f} m (95% < {np.percentile(fair_pos_run2, 95):.2f} m)")
     
     print("\n-- Velocity Error --")
-    print(f"Full    : {np.mean(fair_vel_full):.2f} m/s (95% < {np.percentile(fair_vel_full, 95):.2f} m/s)")
-    print(f"Partial : {np.mean(fair_vel_part):.2f} m/s (95% < {np.percentile(fair_vel_part, 95):.2f} m/s)\n")
+    print(f"Run 1 : {np.mean(fair_vel_run1):.2f} m/s (95% < {np.percentile(fair_vel_run1, 95):.2f} m/s)")
+    print(f"Run 2 : {np.mean(fair_vel_run2):.2f} m/s (95% < {np.percentile(fair_vel_run2, 95):.2f} m/s)")
 
     print("\n-- Mahalanobis Error --")
-    print(f"Full    : {np.mean(fair_D2_full):.2f} (95% < {np.percentile(fair_D2_full, 95):.2f})")
-    print(f"Partial : {np.mean(fair_D2_part):.2f} (95% < {np.percentile(fair_D2_part, 95):.2f})")
+    print(f"Run 1 : {np.mean(fair_D2_run1):.2f} (95% < {np.percentile(fair_D2_run1, 95):.2f})")
+    print(f"Run 2 : {np.mean(fair_D2_run2):.2f} (95% < {np.percentile(fair_D2_run2, 95):.2f})")
 
     print("\n-- NLL --")
-    print(f"Full    : {np.mean(fair_NLL_full):.2f} (95% < {np.percentile(fair_NLL_full, 95):.2f})")
-    print(f"Partial : {np.mean(fair_NLL_part):.2f} (95% < {np.percentile(fair_NLL_part, 95):.2f})")
+    print(f"Run 1 : {np.mean(fair_NLL_run1):.2f} (95% < {np.percentile(fair_NLL_run1, 95):.2f})")
+    print(f"Run 2 : {np.mean(fair_NLL_run2):.2f} (95% < {np.percentile(fair_NLL_run2, 95):.2f})")

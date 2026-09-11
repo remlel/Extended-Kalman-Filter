@@ -138,3 +138,55 @@ If
 the innovation is considered statistically consistent with the predicted uncertainty, and the measurement is accepted.
 
 Otherwise, the innovation is considered too unlikely under the assumed Gaussian model, and the measurement is rejected.
+
+---
+
+# Converted Measurement Kalman Filter (CMKF) - Equations Reference
+
+## 1. Specific Vectors & Matrices
+* **Converted Measurement $Z_{cart}$ (3x1):** $[x_{meas}, y_{meas}, z_{meas}]^T$ obtained via Spherical-to-Cartesian conversion.
+* **Doppler Measurement $Z_{vel}$ (1x1):** $[v_{rad}]$
+* **Linear Observation Matrix $H_{lin}$ (3x6):** $\begin{bmatrix} I_{3\times3} & 0_{3\times3} \end{bmatrix}$ (Extracts only Cartesian positions).
+* **Converted Noise Covariance $R_{cart}$ (3x3):** Cartesian projection of the polar position noise.
+* **Conversion Jacobian $J_{s2c}$ (3x3):** Partial derivatives of the Spherical-to-Cartesian transformation evaluated at the measurement.
+
+---
+
+## 2. Stage 1: Linear Position Update
+Transforms the measurement to Cartesian space to perform a purely linear Kalman update.
+
+**Converted Measurement & Covariance:**
+$$ Z_{cart} = \text{Sphe2Cart}(r, \theta, \phi) $$
+$$ R_{cart} = J_{s2c} R_{pos} J_{s2c}^T $$
+
+**Linear Innovation & Gain:**
+$$ Y_{cart} = Z_{cart} - H_{lin} \hat{X}_{k|k-1} $$
+$$ S_{cart} = H_{lin} P_{k|k-1} H_{lin}^T + R_{cart} $$
+$$ K_{cart} = P_{k|k-1} H_{lin}^T S_{cart}^{-1} $$
+
+**Intermediate State & Covariance Update:**
+$$ \hat{X}_{int} = \hat{X}_{k|k-1} + K_{cart} Y_{cart} $$
+$$ P_{int} = (I - K_{cart} H_{lin}) P_{k|k-1} $$
+
+> **Note - Velocity Correction:** Although $H_{lin}$ zeroes out the velocity components of the measurement, the velocity state is still corrected during this stage thanks to the position-velocity cross-correlations implicitly stored in $P_{k|k-1}$.
+
+---
+
+## 3. Stage 2: Non-Linear Doppler Update
+Updates the filter using the radial velocity measurement. Crucially, the non-linear Jacobian is evaluated around the newly corrected intermediate state $\hat{X}_{int}$.
+
+**Non-Linear Innovation (Doppler only):**
+$$ Y_{vel} = v_{rad} - h_{vrad}(\hat{X}_{int}) $$
+
+**Jacobian & Innovation Covariance:**
+$$ H_{vrad} = \left. \frac{\partial h_{vrad}}{\partial X} \right|_{X = \hat{X}_{int}} \quad \text{(Size: 1x6)} $$
+$$ S_{vel} = H_{vrad} P_{int} H_{vrad}^T + R_{vrad} $$
+
+**Final State & Covariance Update:**
+$$ K_{vel} = P_{int} H_{vrad}^T S_{vel}^{-1} $$
+$$ \hat{X}_{k|k} = \hat{X}_{int} + K_{vel} Y_{vel} $$
+$$ P_{k|k} = (I - K_{vel} H_{vrad}) P_{int} $$
+
+---
+
+> **Note - Partial Measurements Constraint:** The Spherical-to-Cartesian conversion inherently requires angles (Azimuth and Elevation). If the incoming measurement is partial (e.g., Range/Doppler only), the CMKF architecture cannot be applied. The pipeline must dynamically fall back to the Standard EKF update for these specific measurements.
