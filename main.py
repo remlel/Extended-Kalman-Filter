@@ -97,9 +97,9 @@ if __name__ == "__main__":
     
     # ---| 1. "Switches" |--- #
     
-    DO_EVALUATION = False
+    DO_EVALUATION = True
     DO_VISUALIZATION = False
-    DO_BENCHMARK = True
+    DO_BENCHMARK = False
 
 
     # ---| 2. Setup |--- #
@@ -136,8 +136,8 @@ if __name__ == "__main__":
         # ======> Chose Title <====== #
         run1_title = "cmkf (~Init_Part & ~Update_Part)"
         # ======> Chose desired config <====== #
-        my_config.allow_partial_init = True
-        my_config.allow_partial_update = True
+        my_config.allow_partial_init = False
+        my_config.allow_partial_update = False
         my_config.update_strategy = "cmkf"
         #======================================#
 
@@ -149,9 +149,9 @@ if __name__ == "__main__":
         # ======> Chose Title <====== #
         run2_title = "standard (~Init_Part & ~Update_Part)"
         # ======> Chose desired config <====== #
-        my_config.allow_partial_init = True
-        my_config.allow_partial_update = True
-        my_config.update_strategy = "heuristic_reset"
+        my_config.allow_partial_init = False
+        my_config.allow_partial_update = False
+        my_config.update_strategy = "standard"
         #======================================#
 
         states_run2, cov_matrices_run2, _ = run_full_estimation(dataset_files, my_config)

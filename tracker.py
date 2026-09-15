@@ -35,6 +35,8 @@ class RadarTracker:
             self.updater = HybridResetUpdate()
         elif self.config.update_strategy.lower() == "cmkf":
             self.updater = CMKF()
+        elif self.config.update_strategy.lower() == "ukf":
+            self.updater = UKF()
         else:
             raise ValueError(f"Unknown Strategy: {self.config.update_strategy}")
 
@@ -58,12 +60,11 @@ class RadarTracker:
 
         # ---| 2. Update (not always) |---#
 
-        # Determining R according to the measurement
+        # 1. Determining R according to the measurement
         R_current = self.config.R_elementary    # Currently using the same basic measurement noise matrix
 
         # 2. Converting prediction into a measurement
-        z_pred_full = h_nonlinear(self.ekf.x, self.radar_pos)
-        H_full = compute_jacobian(h_nonlinear, self.ekf.x, self.radar_pos)
+        z_pred = h_nonlinear(self.ekf.x, self.radar_pos)
 
         # 3. Creation of a Boolean mask (True -> measure, False -> NaN)
         mask = ~np.isnan(z_meas).flatten()
@@ -73,53 +74,21 @@ class RadarTracker:
         if is_missing:
             self.missed_detections += 1
 
-        # 6. Case where there is at least one measurement    
+        # 5. Case where an update is possible    
         else:
-            # Dynamic truncation
-            z_meas_part = z_meas[mask]           # Only keeping valid measures
-            z_pred_part = z_pred_full[mask]      # Only keeping the associated predicted measures
-            H_part = H_full[mask, :]             # Only keeping the lines associated to the valid measures
-            R_part = R_current[np.ix_(mask, mask)]       # Only keeping the lines and columns associated to the valid measures
-            
-            # 6.1. Calculating covariance innovation and Mahalanobis' distance
-            S_part = self.ekf.covariance_innovation_S(H_part, R_part)
-            D2 = self._calculate_mahalanobis(z_meas_part, z_pred_part, S_part)
-            
-            # 6.2. Fetching the gating threshold associated with the degree of freedom
-            dof = np.sum(mask)
-            gating_threshold = self.chi2_thresholds[dof]
-            
-            
-            if D2 <= gating_threshold:
-                # 6.3. Updating
-                self.updater.apply(self, z_meas, mask, z_meas_part, z_pred_part, H_part, S_part, R_part, self.config)
+
+            # 5.1. Launching Updating Process
+            is_updated = self.updater.apply(self, z_meas, z_pred, mask, R_current, self.config, self.chi2_thresholds)
+
+            if is_updated:
+                # 5.2. Restarting counter
                 self.missed_detections = 0
-          
             else:
-                # 6.4. Rejecting measurement
+                # 5.3. Rejecting measurement
                 self.missed_detections += 1
 
-        # 7. Handling track's death if to many missed detections
+        # 6. Handling track's death if to many missed detections
         if self.missed_detections == self.max_missed_detect:
             return False
         else:
             return True
-        
-
-    def _calculate_mahalanobis(self, z_meas: np.ndarray, z_pred: np.ndarray, S: np.ndarray) -> float:
-        """
-        Computes the squared Mahalanobis distance between the actual measurement 
-        and the predicted measurement.
-        
-        Args:
-            z_meas (np.ndarray): The radar measurement vector.
-            z_pred (np.ndarray): The converted prediction into measurement.
-            S (np.ndarray): Covariance Innovation (plausible innovation)
-        Returns:
-            D2 (float) : Mahalanobis distance
-        """
-
-        innovation = z_meas - z_pred
-        D2 = innovation.T @ np.linalg.solve(S, innovation)      # Same as : inov.T x inv(S) x inov
-
-        return D2.item()

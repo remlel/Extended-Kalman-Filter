@@ -13,11 +13,11 @@ class TrackerConfig:
     # Partial or Full measurements initialization
     allow_partial_init : bool = True
     # Partial or Full measurements update
-    allow_partial_update : bool = False
+    allow_partial_update : bool = True
     # Forcing a degraded initialization (evaluate partial initialization performance)
     force_degraded_init: bool = True
-    # Startegy for updates : "standard" / "heuristic_reset" / "hybrid_heuristic_reset" / "cmkf"
-    update_strategy: str = "heuristic_reset"
+    # Startegy for updates : "standard" / "heuristic_reset" / "hybrid_heuristic_reset" / "cmkf" / "ukf"
+    update_strategy: str = "cmkf"
     # Restart threshold for "heuristic_reset" and "hybrid_heuristic_reset"
     reset_threshold = 1.2
     # Dynamic Gating Threshold (Chi-2 law at 95%)

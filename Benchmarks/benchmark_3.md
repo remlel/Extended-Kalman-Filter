@@ -1,148 +1,232 @@
-# Benchmark 3 — Measured Centered Kalman Filter
+# Benchmark 3 — Centered Measured Kalman Filter
 
 ## 1. Objective
 
-The objective of this benchmark is to investigate whether a **Measured Centered Kalman Filter (MCKF)** can provide a more robust and principled way of exploiting partial measurements and partial initialization.
+The objective of this benchmark is to evaluate the performance of the Centered Measured Kalman Filter (CMKF).
 
-Benchmark 2 showed that the Restart strategy can significantly improve the robustness of partial initialization. However, this improvement relies on an explicit heuristic mechanism to detect degraded tracks and reinitialize them.
+The previous benchmarks showed that the standard EKF can handle partial updates relatively well, while partial initialization can lead to degraded tracking performance. A heuristic reset strategy was previously introduced, with a reset threshold of 1.2, and was identified as the most effective overall configuration for handling partial initialization while maintaining the standard EKF's performance on full measurements.
 
-The MCKF provides an alternative approach by reformulating the measurement update in Cartesian coordinates. The objective is therefore to determine whether this formulation can naturally handle partial measurements and partial initialization while maintaining the estimation performance of the standard EKF.
+The CMKF provides an alternative approach by performing the position update directly in Cartesian coordinates. This avoids the position measurement Jacobian used by the standard EKF and provides a different formulation for incorporating position measurements and their associated uncertainty.
 
 ---
 
 ## 2. Experimental Configurations
 
-The benchmark uses the dataset and evaluation methodology defined in the benchmark README. Values are given as **mean / 95th percentile**.
+The benchmark uses the same dataset and evaluation methodology as the previous benchmarks. Values are given as mean / 95th percentile.
 
-### 2.1 Reference Configurations
+The following configurations are used as references:
 
-The following configurations are used as references to assess the performance of the MCKF:
-- **Standard — Full Measurements** configuration provides a reference for the estimation performance achievable with complete measurements.
-- **Standard — Partial Updates** configuration provides a reference for the handling of partial measurements during the update stage.
-- **Restart — Partial Init.** configuration provides a reference for the handling of partial measurements during the initialization stage.
-- **Restart — Partial Init. + Partial Updates** configuration represents the most promising solution obtained in the previous benchmarks globally. It is therefore used as the main reference for evaluating whether the MCKF can provide a more natural alternative to the heuristic restart mechanism.
-
----
-
-## 3. Global Evaluation of the MCKF
-
-### 3.1 MCKF with Full Measurements
-
-| Configuration | Track Availability | Position Error [m] | Velocity Error [m/s] | Mahalanobis Error | NLL Error |
-|---|---:|---:|---:|---:|---:|
-| **MCKF — Full Measurements** | **90.84%** | **1.80 / 5.13** | **2.61 / 8.46** | **12.74 / 46.67** | **9.90 / 26.87** |
-| Standard — Full Measurements | 90.84% | 1.81 / 5.20 | 2.63 / 8.59 | 12.79 / 49.96 | 9.94 / 28.55 |
-
-The MCKF achieves the same track availability as the standard EKF, while providing slightly lower errors across all evaluated metrics: position, velocity, Mahalanobis and NLL errors. The magnitude of these improvements is small, and their statistical significance cannot be established from this evaluation alone. Nevertheless, the results show that the MCKF performs at least as well as the standard EKF under nominal measurement conditions, with a consistent improvement across all evaluated criteria.
-
-The MCKF does not fundamentally improve the handling of the dominant complete-measurement cases, and the overall track availability therefore remains limited by the difficult scenarios already observed with the standard EKF.
-
-### 3.2 MCKF with Partial Updates
-
-| Configuration | Track Availability | Position Error [m] | Velocity Error [m/s] | Mahalanobis Error | NLL Error |
-|---|---:|---:|---:|---:|---:|
-| **MCKF — Partial Updates** | **91.68%** | **1.82 / 5.22** | **2.62 / 8.47** | **13.61 / 47.58** | **10.33 / 27.44** |
-| Standard — Partial Updates | 91.73% | 1.84 / 5.30 | 2.64 / 8.62 | 13.81 / 51.06 | 10.45 / 29.21 |
-
-The MCKF maintains a very similar level of track availability when partial updates are enabled.
-
-Compared with the standard EKF with partial updates, the MCKF provides slightly lower position and velocity errors, together with improved Mahalanobis and NLL metrics.
-
-The MCKF provides performance comparable to the standard EKF for partial updates. No significant degradation is observed, but the results do not show a clear improvement either, which is not surprising given that the standard EKF already handles partial updates effectively.
-
-### 3.3 MCKF with Partial Initialization
-
-| Configuration | Track Availability | Position Error [m] | Velocity Error [m/s] | Mahalanobis Error | NLL Error |
-|---|---:|---:|---:|---:|---:|
-| **MCKF — Partial Initialization** | 91.44% | 1.96 / 5.47 | 2.67 / 8.62 | 14.21 / 47.38 | 10.73 / 27.05 |
-| Restart — Partial Init. | 91.48% | 1.97 / 5.47 | 2.66 / 8.74 | 14.01 / 49.77 | 10.65 / 28.47 |
-
-When partial initialization is enabled, the standard EKF was previously shown to struggle to exploit the subsequent measurements effectively, with valid measurements frequently rejected after the initialization. The MCKF, in contrast, reaches 91.44% track availability, showing that partial initialization can be effectively exploited without leading to the same loss of track continuity.
-
-The estimation errors remain at a reasonable level despite the large uncertainty introduced by the incomplete initialization. The MCKF achieves a performance level comparable to the previously established Restart approach, which was shown to effectively handle partial initialization.
-
-The additional estimation error remains consistent with the increased uncertainty introduced by the partial initialization and does not indicate any abnormal degradation. Overall, the MCKF therefore provides a viable and consistent way of exploiting partial initialization.
-
-### 3.4 MCKF with Partial Initialization and Partial Updates
-
-| Configuration | Track Availability | Position Error [m] | Velocity Error [m/s] | Mahalanobis Error | NLL Error |
-|---|---:|---:|---:|---:|---:|
-| **MCKF — Partial Init. + Partial Updates** | **92.15%** | **1.96 / 5.46** | **2.67 / 8.65** | **14.96 / 48.32** | **11.07 / 27.60** |
-| Restart — Partial Init. + Partial Updates | 92.20% | 1.96 / 5.50 | 2.68 / 8.78 | 15.20 / 51.10 | 11.22 / 29.25 |
-
-The combination of partial initialization and partial updates provides the most significant result of this benchmark.
-
-The MCKF reaches 92.15% track availability, essentially matching the 92.20% obtained with the Restart strategy. The estimation errors are also very similar, with only marginal differences across the evaluated metrics.
-
-These differences are too small to support any meaningful claim of superiority. The results nevertheless show that the MCKF achieves a level of performance at least comparable to the previously established Restart solution.
-
-This is particularly interesting because the MCKF achieves a comparable level of robustness without relying on an explicit restart heuristic. The improvement instead results directly from the formulation of the measurement update.
+- Standard EKF without partial initialization and without partial updates.
+- Standard EKF without partial initialization and with partial updates.
+- Standard EKF with partial initialization and without partial updates.
+- Full Restart Heuristic (threshold 1.2) with partial initialization and with partial updates.
 
 ---
 
-## 4. Benchmark Mode Comparison
+## 3. Global Evaluation of the CMKF
 
-The **MCKF — Partial Init. + Partial Updates** configuration is compared with the reference configurations using the common set of estimated states.
+### 3.1 Without Partial Initialization and Without Partial Updates
 
-### 4.1 Comparison with Standard Full Measurements
+| Configuration | Track Availability | Position Error [m] | Velocity Error [m/s] | Mahalanobis Error | NLL Error |
+|---|---:|---:|---:|---:|---:|
+| **CMKF** | **88.55%** | **1.73 / 4.99** | **2.49 / 8.14** | **10.37 / 37.33** | **8.83 / 22.38** |
+| Standard EKF | 90.84% | 1.81 / 5.20 | 2.63 / 8.59 | 12.79 / 49.96 | 9.94 / 28.55 |
 
-| Configuration | Position Error [m] | Velocity Error [m/s] | Mahalanobis Error | NLL |
-|---|---:|---:|---:|---:|
-| **Standard — Full Measurements** | 1.78 / 5.11 | 2.57 / 8.33 | 12.62 / 48.64 | 9.84 / 27.83 |
-| **MCKF — Partial Init. + Partial Updates** | 1.80 / 5.12 | 2.59 / 8.31 | 12.57 / 47.29 | 9.77 / 26.98 |
+First, the CMKF clearly achieves lower estimation errors than the standard EKF across all evaluated metrics.
 
-The MCKF achieves **virtually identical estimation performance** to the standard EKF with complete measurements when evaluated on their common survival period.
+The improvement is particularly visible for the Mahalanobis and NLL errors, indicating that the CMKF produces estimates that are not only more accurate in position and velocity, but also better aligned with its estimated uncertainty.
 
-The differences remain very small across all metrics, those differences are not statistically significant. 
+However, the CMKF exhibits a lower track availability than the standard EKF, with 88.55% compared with 90.84%.
 
-This confirms that enabling partial initialization and partial updates in the MCKF does not significantly degrade the estimation quality compared with the standard EKF under complete measurements.
-
-### 4.2 Comparison with Heuristic Restart
-
-The MCKF is finally compared with the previously established Restart — Partial Init. + Partial Updates configuration using the common set of estimated states.
-
-The two configurations share 18,366 updates, corresponding to 99.7% of the MCKF track life and 99.6% of the Restart track life. This very high overlap ensures that the comparison is performed on essentially the same tracking states.
-
-| Configuration | Position Error [m] | Velocity Error [m/s] | Mahalanobis Error | NLL |
-|---|---:|---:|---:|---:|
-| **MCKF — Partial Init. + Partial Updates** | 1.94 / 5.40 | 2.64 / 8.49 | 14.80 / 47.54 | 10.98 / 27.17 |
-| **Restart — Partial Init. + Partial Updates** | 1.94 / 5.42 | 2.63 / 8.50 | 15.04 / 50.05 | 11.13 / 28.46 |
-
-The two configurations exhibit essentially identical estimation performance on their common states. The differences are marginal across all metrics, with no meaningful difference in position or velocity accuracy and only small differences in Mahalanobis error and NLL.
-
-These results confirm that the MCKF reaches the same level of tracking performance as the previously established Restart solution, making it a valid alternative to the heuristic approach.
+The combined lower track availability with consistently lower estimation errors, suggest that the gating of the CMKF is more selective and that it preferentially rejects measurements that are more difficult to accommodate. However, this difference in survival rates introduces a selection bias: the standard EKF evaluates a larger set of measurements, potentially including more challenging cases that can degrade its overall error metrics. Therefore, these global results indicate a more selective and well-behaved filtering process for the CMKF, but they are not sufficient on their own to conclude that it provides superior estimation accuracy.
 
 ---
 
-## 5. Interpretation
+### 3.2 Without Partial Initialization and With Partial Updates
 
-The main benefit of the MCKF appears when the filter has to handle large state uncertainties during partial initialization. In the standard EKF, the nonlinear position measurement model is locally linearized around the predicted state. When the initial position is highly uncertain, this linearization can become inaccurate, leading to an incorrect projection of the prediction covariance and, consequently, to inconsistent Mahalanobis distances. Valid subsequent measurements may then be rejected during the validation stage.
+| Configuration | Track Availability | Position Error [m] | Velocity Error [m/s] | Mahalanobis Error | NLL Error |
+|---|---:|---:|---:|---:|---:|
+| **CMKF** | **89.33%** | **1.75 / 5.10** | **2.50 / 8.17** | **11.31 / 38.52** | **9.30 / 23.13** |
+| Standard EKF | 91.73% | 1.84 / 5.30 | 2.64 / 8.62 | 13.81 / 51.06 | 10.45 / 29.21 |
+| CMKF — No Partial Inits & Updates | 88.55% | 1.73 / 4.99 | 2.49 / 8.14 | 10.37 / 37.33 | 8.83 / 22.38 |
 
-The MCKF avoids this issue for the position update by expressing the position measurement directly in Cartesian coordinates. The position measurement model is therefore linear, removing the need to evaluate a position Jacobian around the uncertain predicted state. This allows the measurement information and its associated uncertainty to be incorporated without relying on a potentially inaccurate local linearization, providing a more consistent state and covariance estimate after partial initialization.
+With partial updates enabled, the CMKF again provides lower errors than the standard EKF for all evaluated metrics.
 
-In contrast, with complete measurements, the MCKF and standard EKF exhibit almost identical behavior. In this case, the measurement uncertainty is much smaller and the predicted state is generally sufficiently close to the measurement for the local linearization of the nonlinear measurement model to remain a good approximation. The different measurement-update formulations therefore lead to essentially the same estimation performance under nominal conditions.
+The CMKF nevertheless maintains a lower global availability than the standard EKF.
 
-However, the MCKF does not completely eliminate nonlinear effects. The Doppler measurement still depends nonlinearly on the Cartesian position and velocity, and its update therefore remains sensitive to the quality of the intermediate position estimate. This limitation is particularly relevant at short range, where a relatively small position error can produce a significant angular error and consequently a large error in the predicted radial velocity.
+The increase in track availability when partial updates are enabled shows that the CMKF is effectively able to exploit these additional measurements. At the same time, the estimation errors remain very close to those obtained without partial updates, with only a small and non-significant increase across the considered metrics. This indicates that, similarly to the standard EKF, the CMKF can successfully incorporate partial updates without a significant degradation in estimation accuracy.
 
-The results therefore suggest that the MCKF effectively addresses the linearization issue associated with the position update during partial initialization, while the remaining limitations are mainly related to the nonlinear Doppler update and the underlying prediction model.
+---
 
-| **Successful Partial Initialization with MCKF** | **Failed Partial Initialization with Standard EKF** |
+### 3.3 With Partial Initialization and Without Partial Updates
+
+| Configuration | Track Availability | Position Error [m] | Velocity Error [m/s] | Mahalanobis Error | NLL Error |
+|---|---:|---:|---:|---:|---:|
+| **CMKF** | **89.19%** | **1.89 / 5.26** | **2.56 / 8.38** | **11.77 / 37.63** | **9.62 / 22.80** |
+| Standard EKF | 89.89% | 2.09 / 5.79 | 2.84 / 9.12 | 15.92 / 55.61 | 11.65 / 32.08 |
+| CMKF — No Partial Inits & Updates | 88.55% | 1.73 / 4.99 | 2.49 / 8.14 | 10.37 / 37.33 | 8.83 / 22.38 |
+
+The standard EKF, as observed in the previous configuration, is unable to effectively exploit partial initialization, with a clear degradation in track availability compared with simply discarding these measurements. 
+
+In contrast, enabling partial initialization in the CMKF increases track availability from 88.55% to 89.19%, indicating that the filter is able to exploit these measurements and maintain longer track survival. 
+
+The associated increase in estimation errors is expected, as partial initialization provides less information about the initial state than a full initialization and therefore introduces greater initial uncertainty. Overall, these results indicate that the CMKF can effectively exploit partial initialization without the substantial degradation observed with the standard EKF.
+
+| <strong>Successful Partial Initialization with MCKF</strong> | <strong>Failed Partial Initialization with Standard EKF</strong> |
 |:---:|:---:|
 | <img src="../Upload/CMKF_partial_init.png" height="700"> | <img src="../Upload/Standard_EKF_partial_init.png" height="700"> |
 
 ---
 
-## 6. Conclusions
+### 3.4 With Partial Initialization and Partial Updates
 
-The MCKF provides a significant improvement in robustness when partial initialization is enabled while preserving the estimation performance of the standard EKF.
+| Configuration | Track Availability | Position Error [m] | Velocity Error [m/s] | Mahalanobis Error | NLL Error |
+|---|---:|---:|---:|---:|---:|
+| **CMKF** | **89.81%** | **1.88 / 5.30** | **2.56 / 8.40** | **12.80 / 38.87** | **10.11 / 23.40** |
+| Full Restart Heuristic (1.2) | 92.20% | 1.96 / 5.50 | 2.68 / 8.78 | 15.20 / 51.10 | 11.22 / 29.25 |
 
-The main conclusions are:
+The combination of partial initialization and partial updates confirms that the CMKF can successfully handle both types of partial measurements simultaneously. The resulting estimation metrics remain consistent with the behaviour observed when partial initialization and partial updates were evaluated separately, with no unexpected degradation.
 
-- With full measurements, the MCKF and standard EKF provide globally identical tracking performance.
-- With partial updates, the MCKF maintains comparable availability and slightly improves the estimation metrics.
-- With partial initialization, the MCKF provides a clear improvement in track availability and estimation performance.
-- With both partial initialization and partial updates, the MCKF reaches **92.15% availability**, essentially matching the **92.20% obtained with the Restart strategy**.
+Compared with the Full Restart Heuristic (1.2), the CMKF achieves lower estimation errors across all considered metrics, while exhibiting lower track availability (89.81% versus 92.20%). This combination of lower errors and lower availability is consistent with the hypothesis that the CMKF employs a more selective gating strategy, preferentially retaining measurements that are better aligned with its prediction.
 
-The MCKF therefore appears to provide a more principled and natural solution to the partial-initialization problem than the previously selected Restart strategy.
+However, this global comparison alone cannot determine whether the CMKF is intrinsically more accurate, since the two filters do not evaluate exactly the same set of measurements. A common-survival benchmark is therefore required to compare their estimation performance on the same retained states.
 
-The remaining limitation is that the MCKF does not address the fundamental weaknesses of the current constant-velocity prediction model or the nonlinear Doppler update. Further improvements should therefore focus on these aspects.
+---
+
+## 4. Analysis of Track Availability and Measurement Selectivity
+
+### 4.1 The Double-Gating Mechanism
+
+The CMKF uses two measurement updates:
+
+1. a position update performed in Cartesian coordinates;
+2. a radial-velocity update performed in the measurement space.
+
+Each update performs its own measurement validation through a Mahalanobis-based gating mechanism.
+
+As a result, a measurement must pass two successive validation stages before the complete update is accepted.
+
+This creates a more selective overall acceptance mechanism than a single gating operation.
+
+The effect becomes particularly relevant because the first position update modifies the state estimate and its covariance before the radial-velocity update is performed.
+
+After the position update, the state covariance can become significantly smaller. The subsequent Doppler innovation is therefore evaluated with a potentially smaller innovation covariance.
+
+Consequently, a Doppler measurement that is compatible with the target motion but differs sufficiently from the prediction can be rejected by the second gating stage.
+
+This behaviour is not necessarily an indication of poor estimation. Instead, it reflects the fact that the CMKF has become more selective about the consistency between the measurements and the predicted state.
+
+---
+
+### 4.2 Interaction with the Constant-Velocity Model
+
+The selectivity of the Doppler gating becomes particularly important for highly manoeuvring targets.
+
+The current prediction model assumes constant velocity. This model is only an approximation of the actual target dynamics.
+
+For moderate target motion, the prediction remains sufficiently close to the actual state for the Doppler measurement to pass the validation gate.
+
+For strong accelerations or abrupt manoeuvres, however, the predicted velocity can differ significantly from the actual velocity.
+
+The CMKF can then identify the measured radial velocity as inconsistent with the predicted state and reject it.
+
+This behaviour can reduce track availability even though accepting the measurement could allow the filter to continue following the target.
+
+The global results therefore suggest that the availability limitation is more likely related to the interaction between the CMKF's selective gating and the current motion model than to an inability to process partial measurements.
+
+---
+
+### 4.3 Diagnostic Experiment: Doppler Gating Disabled
+
+To investigate the origin of the availability limitation, the Doppler gating was disabled while retaining the position gating.
+
+The resulting global performance is:
+
+| Configuration | Track Availability | Position Error [m] | Velocity Error [m/s] | Mahalanobis Error | NLL Error |
+|---|---:|---:|---:|---:|---:|
+| **CMKF — Position Gating Only** | **96.09%** | 2.40 / 7.58 | 3.13 / 10.76 | 26.63 / 114.03 | 16.70 / 60.76 |
+| CMKF — Double Gating | 89.81% | **1.88 / 5.30** | **2.56 / 8.40** | **12.80 / 38.87** | **10.11 / 23.40** |
+
+Removing the Doppler gating produces a substantial increase in track availability, from 89.81% to 96.09%.
+
+This confirms that the Doppler validation stage is responsible for a significant part of the rejected measurements.
+
+However, the increase in availability comes at a substantial cost in estimation quality.
+
+The mean position error increases from 1.88 m to 2.40 m, while the 95th-percentile position error increases from 5.30 m to 7.58 m.
+
+The degradation is even more significant for the uncertainty-related metrics. The mean Mahalanobis error increases from 12.80 to 26.63, and its 95th percentile increases from 38.87 to 114.03.
+
+The same behaviour is observed for the NLL metric.
+
+This experiment demonstrates that the Doppler gating is not simply preventing the filter from tracking difficult targets. It also acts as an effective protection mechanism against measurements that are inconsistent with the current state estimate.
+
+The CMKF therefore exhibits a clear trade-off between track availability and estimation quality:
+
+- retaining the Doppler gate results in lower availability but substantially better estimation quality;
+- removing the Doppler gate increases availability but allows inconsistent measurements to influence the filter, degrading the resulting state estimates.
+
+---
+
+## 6. Benchmark Mode Comparison
+
+Global evaluation alone does not provide a complete comparison between the CMKF and the standard EKF.
+
+The two filters do not maintain exactly the same tracks. A filter can therefore obtain a better global error simply because the difficult portions of the dataset are no longer included in its evaluation after a track is lost.
+
+Benchmark mode provides a direct comparison of the estimation quality produced by the two filters under the same surviving tracking conditions.
+
+---
+
+### 6.1 CMKF vs Standard EKF
+
+The comparison is performed between:
+
+- Run 1: CMKF without partial initialization and without partial updates;
+- Run 2: Standard EKF without partial initialization and without partial updates.
+
+#### Track Survival Intersection
+
+| Metric | Value |
+|---|---:|
+| Total survived updates — CMKF | 17,709 |
+| Total survived updates — Standard EKF | 18,168 |
+| **Common survival** | **17,424** |
+| CMKF life shared with Standard EKF | **98.4%** |
+| Standard EKF life shared with CMKF | **95.9%** |
+| Unique CMKF updates | 285 |
+| Unique Standard EKF updates | 744 |
+
+The overlap is very high, making the common-survival comparison representative of almost the entire tracking period of both filters.
+
+#### Estimation Performance on Common States
+
+| Configuration | Position Error [m] | Velocity Error [m/s] | Mahalanobis Error | NLL |
+|---|---:|---:|---:|---:|
+| **CMKF** | **1.70 / 4.93** | **2.38 / 7.63** | **10.36 / 37.34** | **8.72 / 22.18** |
+| Standard EKF | 1.73 / 4.94 | 2.40 / 7.61 | 11.29 / 43.10 | 9.11 / 24.93 |
+
+The common-survival benchmark provides a direct comparison of the estimation accuracy of the two filters on the same retained states. Since these common states are evaluated without partial initialization or partial updates, the comparison reflects the intrinsic estimation performance of the two filtering formulations without the additional effects introduced by partial measurements. And as seen previously, the comparison is based on a highly overlapping set of states.
+
+The CMKF achieves lower errors across all mean accuracy metrics: position error decreases from 1.73 m to 1.70 m, velocity error from 2.40 m/s to 2.38 m/s, Mahalanobis error from 11.29 to 10.36, and NLL from 9.11 to 8.72. The same trend is observed for the 95th-percentile metrics, except for velocity, where the standard EKF is marginally better (7.61 m/s versus 7.63 m/s). Overall, the CMKF therefore demonstrates a modest but consistent improvement in estimation accuracy on the common-survival set.
+
+This result confirms that the lower global availability observed with the CMKF is not due to poorer estimation accuracy. Rather, when both filters retain the same states, the CMKF provides better overall estimation performance. The common-survival benchmark therefore supports the conclusion that the CMKF is more accurate than the standard EKF, independently of its more selective track acceptance behaviour.
+
+---
+
+## 7. Final Interpretation and Conclusion
+
+## 7. Final Interpretation and Conclusion
+
+Overall, the benchmark shows that the CMKF provides a promising alternative to the standard EKF, with a modest but consistent improvement in estimation accuracy on common-survival states. 
+
+A possible explanation lies in the location of the approximation introduced by the nonlinear measurement model. By transforming the measured polar position and its associated uncertainty into Cartesian space, the CMKF avoids linearizing the measurement function around a highly uncertain predicted state. Since the radar measurements are relatively precise, introducing this approximation on the measurement side appears to be more favourable than applying it to the prediction side, particularly when the state uncertainty is large during initialization.
+
+The results on partial measurements should however be distinguished between partial updates and partial initialization. 
+
+Partial updates are not handled intrinsically by the CMKF formulation: when a measurement is incomplete during an update, the corresponding update is performed using the standard EKF formulation. This is not a limitation in practice, since the standard EKF already handles partial updates effectively, as demonstrated by the first benchmark. Partial initialization is fundamentally different. 
+
+The CMKF is able to incorporate incomplete measurements directly into the initialization process, whereas the standard EKF cannot effectively exploit them. Moreover, unlike the heuristic restart strategy, the CMKF does not discard the previous track and restart it when the initial uncertainty becomes large. Instead, it naturally retains the available state information and its associated uncertainty, allowing the Kalman filter to preserve the system's estimated inertia while appropriately reducing the influence of the uncertain initialization measurements.
+
+The main remaining limitation of the CMKF is related to measurement acceptance. Its successive position and radial-velocity updates result in a more selective gating mechanism, since the covariance is already reduced after the first update when the radial-velocity measurement is evaluated. This can lead to measurement rejection when the constant-velocity prediction becomes inaccurate, particularly in high-dynamics scenarios. The heuristic restart strategy therefore remains advantageous in terms of overall track availability, while the CMKF provides better estimation accuracy on commonly retained states. Improving the transition model beyond the current constant-velocity assumption could therefore reduce these prediction errors and potentially make the CMKF substantially more competitive with the heuristic restart strategy.
+

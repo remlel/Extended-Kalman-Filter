@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 
 
 
@@ -56,7 +55,7 @@ def evaluate_tracker_performance(all_estimated_states: list, all_covariance_matr
     P_valid = array_covariance_matrices[valid_mask]
 
     # Mahalanobis error
-    invP_diff = np.linalg.solve(P_valid, diff_valid[:, :, np.newaxis]).squeeze(-1)      # Adding fake column for calculatio, them removing it
+    invP_diff = np.linalg.solve(P_valid, diff_valid[:, :, np.newaxis]).squeeze(-1)      # Adding fake column for calculation, them removing it
     array_D2[valid_mask] = np.sum(diff_valid * invP_diff, axis=1)                       # Same as: diff_valid @ invP_diff
 
     # NLL error

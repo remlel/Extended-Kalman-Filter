@@ -187,6 +187,65 @@ $$ K_{vel} = P_{int} H_{vrad}^T S_{vel}^{-1} $$
 $$ \hat{X}_{k|k} = \hat{X}_{int} + K_{vel} Y_{vel} $$
 $$ P_{k|k} = (I - K_{vel} H_{vrad}) P_{int} $$
 
+> **Note - Partial Measurements Constraint:** The Spherical-to-Cartesian conversion inherently requires angles (Azimuth and Elevation). If the incoming measurement is partial (e.g., Range/Doppler only), the CMKF architecture cannot be applied. The pipeline must dynamically fall back to the Standard EKF update for these specific measurements.
+
 ---
 
-> **Note - Partial Measurements Constraint:** The Spherical-to-Cartesian conversion inherently requires angles (Azimuth and Elevation). If the incoming measurement is partial (e.g., Range/Doppler only), the CMKF architecture cannot be applied. The pipeline must dynamically fall back to the Standard EKF update for these specific measurements.
+# Unscented Kalman Filter (UKF) - Equations Reference
+
+> **Note - Core Concept:** The UKF entirely discards Jacobians and linearization. It uses the Unscented Transform (UT) to deterministically sample the probability distribution (Sigma Points) and pass them through the true non-linear measurement function. This directly overcomes Jensen's inequality ($E[h(X)] \neq h(E[X])$) and accurately captures the posterior mean and covariance to the 3rd order.
+
+## 1. UT Parameters & Sigma Points Generation
+The state space of dimension $N$ is represented by $2N+1$ deterministically chosen Sigma Points.
+
+**UT Scaling Parameters:**
+* $N$: State dimension (6 for 3D position & velocity)
+* $\lambda$: Scaling parameter defining the spread of the points ($\lambda = \alpha^2(N+\kappa)-N$)
+* $\gamma = \sqrt{N+\lambda}$: Covariance multiplier
+
+**Weights Formulation:**
+$$W_0^{(m)} = \frac{\lambda}{N+\lambda} \quad \text{(Mean weight for the central point)}$$
+$$W_0^{(c)} = \frac{\lambda}{N+\lambda} + (1 - \alpha^2 + \beta) \quad \text{(Covariance weight for the central point)}$$
+$$W_i^{(m)} = W_i^{(c)} = \frac{1}{2(N+\lambda)} \quad \text{for } i = 1, \dots, 2N \quad \text{(Weights for the peripheral points)}$$
+
+**Sigma Points Creation ($\mathcal{X}_i$):**
+
+A matrix $L$ is derived from the Cholesky decomposition of the predicted covariance: $L = \text{cholesky}(P_{k|k-1})$ with $L L^T = P_{k|k-1}$
+$$\mathcal{X}_0 = \hat{X}_{k|k-1}$$
+$$\mathcal{X}_i = \hat{X}_{k|k-1} + \gamma L_i \quad \text{for } i = 1, \dots, N$$
+$$\mathcal{X}_{i+N} = \hat{X}_{k|k-1} - \gamma L_i \quad \text{for } i = 1, \dots, N$$
+*(Where $L_i$ is the $i$-th column of the matrix $L$)*
+
+---
+
+## 2. Measurement Projection (Non-Linear)
+Each Sigma Point is projected through the non-linear measurement function $h(X)$.
+
+**Projected Sigma Points ($\mathcal{Z}_i$):**
+$$\mathcal{Z}_i = h(\mathcal{X}_i) \quad \text{for } i = 0, \dots, 2N$$
+
+**Predicted Measurement Weighted Mean:**
+$$\hat{Z}_{k} = \sum_{i=0}^{2N} W_i^{(m)} \mathcal{Z}_i$$
+
+---
+
+## 3. Update Phase (Jacobian-Free)
+Replaces the standard $H P H^T$ and $P H^T$ matrices with cross-correlations of the Sigma Points.
+
+**Measurement Innovation:**
+$$Y_k = Z_{meas} - \hat{Z}_{k}$$
+
+**Innovation Covariance ($S_k$):**
+$$S_k = \sum_{i=0}^{2N} W_i^{(c)} (\mathcal{Z}_i - \hat{Z}_{k})(\mathcal{Z}_i - \hat{Z}_{k})^T + R$$
+
+**State-Measurement Cross-Covariance ($P_{xz}$):**
+$$P_{xz} = \sum_{i=0}^{2N} W_i^{(c)} (\mathcal{X}_i - \hat{X}_{k|k-1})(\mathcal{Z}_i - \hat{Z}_{k})^T$$
+
+**Kalman Gain & Final Update:**
+$$K_k = P_{xz} S_k^{-1}$$
+$$\hat{X}_{k|k} = \hat{X}_{k|k-1} + K_k Y_k$$
+$$P_{k|k} = P_{k|k-1} - K_k S_k K_k^T$$
+
+---
+
+> **Note - Covariance Update Formula:** Since the matrix $H$ is never explicitly computed, the classical EKF covariance update equation $P = (I - KH)P$ cannot be used. The equivalent, stable formulation $P = P - K S K^T$ is utilized instead.
