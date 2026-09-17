@@ -54,8 +54,8 @@ With partial updates enabled, the CMKF again provides lower errors than the stan
 
 The CMKF nevertheless maintains a lower global availability than the standard EKF.
 
-The increase in track availability when partial updates are enabled shows that the CMKF is effectively able to exploit these additional measurements. At the same time, the estimation errors remain very close to those obtained without partial updates, with only a small and non-significant increase across the considered metrics. This indicates that, similarly to the standard EKF, the CMKF can successfully incorporate partial updates without a significant degradation in estimation accuracy.
-
+With partial updates enabled, the CMKF increases track availability from 88.55% to 89.33%, corresponding to a **0.78 percentage-point increase**, compared with **0.89 percentage points for the standard EKF**. The slightly smaller gain is consistent with the more selective gating of the CMKF, which may reject some partial updates when they fall in regions where the predicted state is less consistent with the measurement. Nevertheless, the increase remains close to that obtained with the standard EKF, indicating that the CMKF is able to effectively exploit partial updates. At the same time, the estimation errors remain very close to those obtained without partial updates, with only a small and non-significant increase across the considered metrics.
+ 
 ---
 
 ### 3.3 With Partial Initialization and Without Partial Updates
@@ -68,9 +68,11 @@ The increase in track availability when partial updates are enabled shows that t
 
 The standard EKF, as observed in the previous configuration, is unable to effectively exploit partial initialization, with a clear degradation in track availability compared with simply discarding these measurements. 
 
-In contrast, enabling partial initialization in the CMKF increases track availability from 88.55% to 89.19%, indicating that the filter is able to exploit these measurements and maintain longer track survival. 
+In contrast, enabling partial initialization in the CMKF increases track availability from 88.55% to 89.19%, corresponding to a **0.64 percentage points** increase. It indicates that the filter is able to exploit these measurements and maintain longer track survival. Moreover, the availability gain from partial initialization **exactly matches** that obtained with the Full Restart Heuristic, indicating that the CMKF successfully exploits essentially all partial initializations to maintain the track.
 
 The associated increase in estimation errors is expected, as partial initialization provides less information about the initial state than a full initialization and therefore introduces greater initial uncertainty. Overall, these results indicate that the CMKF can effectively exploit partial initialization without the substantial degradation observed with the standard EKF.
+
+This behaviour is consistent with the CMKF formulation, where the approximation is performed on the measurement rather than on the highly uncertain state prediction. This allows the filter to properly initialize the track even when the initial prediction carries a large uncertainty.
 
 | <strong>Successful Partial Initialization with MCKF</strong> | <strong>Failed Partial Initialization with Standard EKF</strong> |
 |:---:|:---:|

@@ -25,8 +25,8 @@ The following configurations from Benchmark 1 are used as references:
 
 | Configuration | Track Availability | Position Error [m] | Velocity Error [m/s] | Mahalanobis Error | NLL Error |
 |---|---:|---:|---:|---:|---:|
-| **Standard — Full Measurements** | 90.84% | 1.81 / 5.20 | 2.63 / 8.59 | 12.79 / 49.96 | 9.94 / 28.55 |
-| **Standard — Partial Updates** | 91.73% | 1.84 / 5.30 | 2.64 / 8.62 | 13.81 / 51.06 | 10.45 / 29.21 |
+| Standard — Full Measurements | 90.84% | 1.81 / 5.20 | 2.63 / 8.59 | 12.79 / 49.96 | 9.94 / 28.55 |
+| Standard — Partial Updates | 91.73% | 1.84 / 5.30 | 2.64 / 8.62 | 13.81 / 51.06 | 10.45 / 29.21 |
 | Standard — Partial Init. + Partial Updates | 90.65% | 2.08 / 5.84 | 2.82 / 9.08 | 23.47 / 54.85 | 15.40 / 31.68 |
 
 ---
@@ -52,6 +52,10 @@ More aggressive restart thresholds further increase availability. At **0.99**, a
 However, this increased availability comes at the cost of progressively degraded position and velocity accuracy. The very low Mahalanobis errors obtained with the most aggressive thresholds should therefore not be interpreted as evidence of better overall tracking performance. The filter increasingly relies on measurement-driven resets and loses the temporal information provided by the EKF.
 
 The threshold of **1.2** therefore appears to provide the most promising operational compromise: it substantially improves availability while preserving the benefits of temporal filtering.
+
+Moreover, the availability gain achieved by exploiting partial initializations is **0.64 percentage points**, providing a useful quantitative reference for comparing the ability of other filtering approaches to exploit partial initialization, since, by its nature, this filter achieves the maximum possible availability gain from partial initialization. More precisely, this gain is measured between the Full Restart configuration without partial measurements and the Full Restart configuration exploiting partial initialization only.
+
+The gain from partial update is the same as for the standard EKF (**0.89 percentage points**), since the 1.2 threshold is only reached for partial initialisation.
 
 > **Note:** The restart threshold does not affect the results continuously. Since the decision depends on the discrete values encountered by the restart criterion, multiple threshold values can lead to exactly the same behavior. For example, thresholds of **1.1** and **1.2** produce identical results in the current evaluation.
 

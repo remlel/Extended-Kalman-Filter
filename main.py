@@ -97,9 +97,9 @@ if __name__ == "__main__":
     
     # ---| 1. "Switches" |--- #
     
-    DO_EVALUATION = True
+    DO_EVALUATION = False
     DO_VISUALIZATION = False
-    DO_BENCHMARK = False
+    DO_BENCHMARK = True
 
 
     # ---| 2. Setup |--- #
@@ -134,11 +134,11 @@ if __name__ == "__main__":
         # ---| Run 1 |--- #
 
         # ======> Chose Title <====== #
-        run1_title = "cmkf (~Init_Part & ~Update_Part)"
+        run1_title = "ukf (Init_Part & ~Update_Part)"
         # ======> Chose desired config <====== #
-        my_config.allow_partial_init = False
+        my_config.allow_partial_init = True
         my_config.allow_partial_update = False
-        my_config.update_strategy = "cmkf"
+        my_config.update_strategy = "ukf"
         #======================================#
 
         states_run1, cov_matrices_run1, truth = run_full_estimation(dataset_files, my_config)
@@ -147,11 +147,11 @@ if __name__ == "__main__":
         # ---| Run 2 |--- #
 
         # ======> Chose Title <====== #
-        run2_title = "standard (~Init_Part & ~Update_Part)"
+        run2_title = "heuristic_reset (Init_Part & ~Update_Part)"
         # ======> Chose desired config <====== #
-        my_config.allow_partial_init = False
+        my_config.allow_partial_init = True
         my_config.allow_partial_update = False
-        my_config.update_strategy = "standard"
+        my_config.update_strategy = "heuristic_reset"
         #======================================#
 
         states_run2, cov_matrices_run2, _ = run_full_estimation(dataset_files, my_config)
